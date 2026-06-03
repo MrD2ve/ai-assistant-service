@@ -1,30 +1,30 @@
 import os
 from openai import OpenAI
-from django.conf import settings  # Импортируем настройки
+from django.conf import settings  # Import settings
 
 def generate_tailored_resume(resume_text, vacancy_text):
-    # Инициализируем клиент, передавая ключ и адрес OpenRouter явно
+    # Initialize the client by passing the OpenRouter key and address explicitly
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=settings.OPENROUTER_API_KEY,  # Берём ключ из настроек Django
+        api_key=settings.OPENROUTER_API_KEY,  # API Key from Django settings
     )
 
     prompt = f"""
-           У меня есть резюме:
+           I have a resume:
            {resume_text}
 
-           И вакансия:
+           And a vacancy:
            {vacancy_text}
 
-           Пожалуйста, сделай две вещи:
-           1. Напиши профессиональное сопроводительное письмо (Cover Letter) на английском.
-           2. Выдели список ключевых навыков (Keywords), которых не хватает в моем резюме для этой вакансии.
+           Please do two things:
+              1. Write a professional cover letter in English.
+              2. Highlight the key skills (Keywords) that are missing from my resume for this position.
 
-           ВАЖНО: Обязательно раздели сопроводительное письмо и ключевые навыки строкой [SPLIT]. 
-           Ничего другого между ними не пиши. Твой ответ должен выглядеть ТОЧНО так:
-           <текст сопроводительного письма>
+           IMPORTANT: Be sure to separate your cover letter and key skills with a line [SPLIT]. 
+           Don't write anything else between them. Your answer should look EXACTLY like this:
+           <cover letter text>
            [SPLIT]
-           <текст missing keywords>
+           <text missing keywords>
            """
 
     try:

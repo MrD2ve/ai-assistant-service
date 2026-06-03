@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class Resume(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='resumes')
     title = models.CharField(max_length=255, default="My Base Resume")
-    raw_text = models.TextField(help_text="Сюда вставляется исходный текст резюме")
+    raw_text = models.TextField(help_text="The original text of the resume is inserted here.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -20,14 +20,14 @@ class TailoredApplication(models.Model):
     ]
 
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name='applications')
-    vacancy_description = models.TextField(help_text="Текст вакансии, под которую адаптируем")
+    vacancy_description = models.TextField(help_text="The text of the vacancy to which we are adapting")
 
-    # Результаты от ИИ
-    tailored_resume_text = models.TextField(blank=True, null=True, help_text="Адаптированный текст резюме")
-    cover_letter = models.TextField(blank=True, null=True, help_text="Сгенерированное сопроводительное письмо")
-    missing_keywords = models.JSONField(blank=True, null=True, help_text="Список ключевых слов, которых не хватало")
+    # Result from AI
+    tailored_resume_text = models.TextField(blank=True, null=True, help_text="Adapted resume text")
+    cover_letter = models.TextField(blank=True, null=True, help_text="Generated cover letter")
+    missing_keywords = models.JSONField(blank=True, null=True, help_text="List of missing keywords")
 
-    # Статус для Celery (асинхронности)
+    # Status for Celery (async)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     error_message = models.TextField(blank=True, null=True)
 

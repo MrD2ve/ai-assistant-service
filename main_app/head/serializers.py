@@ -3,7 +3,7 @@ from .models import TailoredApplication, Resume
 
 
 class TailoredApplicationSerializer(serializers.ModelSerializer):
-    # Мы передаем только ID резюме и текст вакансии
+    # We only transmit the resume ID and the job posting text.
     resume_id = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -14,9 +14,9 @@ class TailoredApplicationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         resume_id = validated_data.pop('resume_id')
-        # Проверяем, существует ли такое резюме в базе
+        # We check if such a resume exists in the database.
         resume = Resume.objects.get(id=resume_id)
 
-        # Создаем запись в базе со статусом PENDING
+        # We create a record in the database with the status PENDING
         application = TailoredApplication.objects.create(resume=resume, **validated_data)
         return application
