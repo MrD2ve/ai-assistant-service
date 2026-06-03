@@ -27,13 +27,40 @@ class TailorApplicationView(APIView):
             ai_response = generate_tailored_resume(resume_text, vacancy_text)
 
             # 5. Сохраняем ответ ИИ в базу и меняем статус на SUCCESS
+            # if "Error:" in ai_response:
+            #     application.status = 'FAILED'
+            #     application.save()  # Не забываем сохранить статус FAILED
+            #     # Возвращаем кастомный ответ с текстом ошибки для дебага
+            #     return Response({
+            #         "status": "FAILED",
+            #         "error_details": ai_response
+            #     }, status=status.HTTP_400_BAD_REQUEST)
+
+            # # 5. Сохраняем ответ ИИ в базу и меняем статус на SUCCESS
+            # if "Error:" in ai_response:
+            #     application.status = 'FAILED'
+            #     application.error_message = ai_response
+            # else:
+            #     application.status = 'SUCCESS'
+            #     application.cover_letter = ai_response
+            #     # Пока записываем весь ответ в cover_letter, позже научим ИИ отдавать строгий JSON
+
             if "Error:" in ai_response:
                 application.status = 'FAILED'
-                application.error_message = ai_response
+                application.save()
+                return Response({"status": "FAILED", "error": ai_response}, status=400)
+
+                # РАЗДЕЛЯЕМ ОТВЕТ ИИ
+            if "[SPLIT]" in ai_response:
+                parts = ai_response.split("[SPLIT]")
+                application.cover_letter = parts[0].strip()
+                application.missing_keywords = parts[1].strip()
             else:
-                application.status = 'SUCCESS'
+                # На всякий случай, если ИИ проигнорировал тег
                 application.cover_letter = ai_response
-                # Пока записываем весь ответ в cover_letter, позже научим ИИ отдавать строгий JSON
+                application.missing_keywords = "Не удалось разделить ответ автоматически."
+
+            application.status = 'SUCCESS'
 
             application.save()
 
