@@ -59,10 +59,10 @@ pip install -r requirements.txt
 # Django Settings
 SECRET_KEY=your_django_secret_key_here
 DEBUG=True
-```
 
 # OpenRouter API Configuration
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
 
 ### 5️⃣ Apply database migrations
 ```bash
