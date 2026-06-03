@@ -36,6 +36,7 @@ Follow these steps to get the AI Tailor backend running locally on your machine:
 ```bash
 git clone [https://github.com/MrD2ve/AI_Resume_Tailor.git](https://github.com/MrD2ve/AI_Resume_Tailor.git)
 cd AI_Resume_Tailor
+```
 
 ### 2️⃣ Create and activate venv
 ```bash
@@ -46,16 +47,19 @@ source env/bin/activate
 # On Windows:
 python -m venv env
 env\Scripts\activate
+```
 
 ### 3️⃣ Install the requirement packages
 ```bash
 pip install -r requirements.txt
+```
 
 ### 4️⃣ Environment configuration ( .env )
 ```bash
 # Django Settings
 SECRET_KEY=your_django_secret_key_here
 DEBUG=True
+```
 
 # OpenRouter API Configuration
 OPENROUTER_API_KEY=your_openrouter_api_key_here
@@ -68,6 +72,7 @@ python manage.py migrate
 ### 6️⃣ Run the server
 ```bash
 python manage.py runserver
+```
 
 ---
 
@@ -92,14 +97,14 @@ Go to the **Body** tab, select **raw**, choose **JSON** from the dropdown, and p
 {
     "vacancy_description": "We are looking for a Junior Python Developer. Requirements: Django, REST Framework, PostgreSQL, Git, English B2."
 }
-
+```
 ## 📤 2. Understanding Backend Responses
 
 The Django backend handles AI generation, custom token parsing, and response isolation dynamically. Depending on the server and upstream API state, you will receive one of the following responses:
 
 ### 🟢 Expected Successful Response (201 Created / 200 OK)
 When the OpenRouter LLM successfully responds, the backend splits the markdown payload using the custom [SPLIT] logic and populates cover_letter and missing_keywords separately into individual fields:
-```bash
+```json
 {
     "id": 13,
     "vacancy_description": "We are looking for a Junior Python Developer. Requirements: Django, REST Framework, PostgreSQL, Git, English B2.",
@@ -108,20 +113,22 @@ When the OpenRouter LLM successfully responds, the backend splits the markdown p
     "missing_keywords": "REST Framework (Django REST Framework), PostgreSQL, English B2",
     "status": "SUCCESS"
 }
+```
 
 ### 🟡 API Rate Limit / Provider Error Response (400 Bad Request)
 If the upstream AI models (e.g., Llama, Gemini) hit free-tier rate limits (HTTP 429) or experience temporary downtime (HTTP 503), the robust try/except middleware catches the error, sets the status to FAILED, and safely returns the error payload instead of crashing the Django application:
 
-```bash
+```json
 {
     "status": "FAILED",
     "error_details": "Error: Error code: 429 - {'error': {'message': 'Provider returned error... temporarily rate-limited upstream.'}}"
 }
+```
 
 ### 🔵 Initial Request State (Polling / Async Processing)
 If your local instance handles requests asynchronously or returns an instant handshake tracking code, the endpoint might immediately return a tracking ID with a pending state while the AI finishes generating data in the background:
 
-```bash
+```json
 {
     "id": 12,
     "vacancy_description": "We are looking for a Junior Python Developer...",
@@ -130,3 +137,4 @@ If your local instance handles requests asynchronously or returns an instant han
     "missing_keywords": null,
     "status": "PENDING"
 }
+```
