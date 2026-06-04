@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume & Cover Letter Tailor</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur py-6">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                🤖 AI Resume Tailor
+            </h1>
+            <span class="text-sm bg-slate-800 px-3 py-1 rounded-full text-slate-400 border border-slate-700">Django Backend Active</span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <form id="tailorForm" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-semibold mb-1 text-white">1. Your Base Resume</h2>
+                    <p class="text-xs text-slate-400 mb-4">Paste your current resume skills, experience, or full text here.</p>
+                    <textarea id="resumeText" required rows="10"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none"
+                        placeholder="Donyor Tuygunov&#10;Backend Developer&#10;Skills: Python, Django, SQL, Git..."></textarea>
+                </div>
+
+                <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-semibold mb-1 text-white">2. Target Vacancy</h2>
+                    <p class="text-xs text-slate-400 mb-4">Paste the job description or requirements of the role you want to apply for.</p>
+                    <textarea id="vacancyDescription" required rows="10"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none"
+                        placeholder="We are looking for a Junior Python Developer. Requirements: Django, REST Framework, PostgreSQL, Git..."></textarea>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 text-white font-medium py-4 px-4 rounded-xl transition duration-200 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer text-lg">
+                <span>Generate Custom Application</span>
+            </button>
+        </form>
+
+        <section class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 shadow-xl relative min-h-[300px] flex flex-col justify-between">
+
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                <div class="text-5xl mb-4 text-slate-600">📄</div>
+                <h3 class="text-lg font-medium text-slate-300">No Analysis Generated Yet</h3>
+                <p class="text-sm text-slate-500 max-w-sm mt-1">Fill out both your resume and the target vacancy above, then click generate.</p>
+            </div>
+
+            <div id="loadingState" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl z-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-400 mb-4"></div>
+                <p class="text-blue-400 font-medium">AI is tailoring your application...</p>
+                <p class="text-xs text-slate-500 mt-1">Analyzing gaps and drafting cover letter (takes ~10-15 seconds)</p>
+            </div>
+
+            <div id="resultState" class="hidden space-y-6">
+                <div>
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400 mb-2">🔥 Missing Keywords & Skills (Add these to your resume)</h3>
+                    <div id="missingKeywordsDisplay" class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-sm text-slate-300 leading-relaxed font-mono">
+                        </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold uppercase tracking-wider text-blue-400">📝 Generated Cover Letter</h3>
+                        <button id="copyBtn" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded-lg transition cursor-pointer">
+                            Copy Letter
+                        </button>
+                    </div>
+                    <textarea id="coverLetterDisplay" readonly rows="12"
+                        class="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-sm text-slate-300 leading-relaxed font-mono resize-none focus:outline-none"></textarea>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        document.getElementById('tailorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const resumeText = document.getElementById('resumeText').value;
+            const vacancyText = document.getElementById('vacancyDescription').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            const resultState = document.getElementById('resultState');
+
+            // Включаем лоадер
+            emptyState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            resultState.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+
+            try {
+                // В FETCH теле передаем ОБА обязательных поля под ключами, которые ждет сериализатор
+                const response = await fetch('/tailor/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        "resume_text": resumeText,
+                        "vacancy_description": vacancyText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'SUCCESS') {
+                    document.getElementById('missingKeywordsDisplay').innerText = data.missing_keywords || "No missing keywords detected.";
+                    document.getElementById('coverLetterDisplay').value = data.cover_letter || "";
+
+                    loadingState.classList.add('hidden');
+                    resultState.classList.remove('hidden');
+                } else {
+                    alert('AI Generation Error: ' + (data.error_details || JSON.stringify(data)));
+                    loadingState.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Network error or server down.');
+                loadingState.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            }
+        });
+
+        // Кнопка копирования
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const textToCopy = document.getElementById('coverLetterDisplay').value;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = this.innerText;
+                this.innerText = 'Copied! ✓';
+                this.style.backgroundColor = '#10B981';
+                setTimeout(() => {
+                    this.innerText = originalText;
+                    this.style.backgroundColor = '';
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>

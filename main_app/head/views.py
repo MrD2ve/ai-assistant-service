@@ -1,51 +1,56 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import TailoredApplication, Resume
-from .serializers import TailoredApplicationSerializer
-from .services import generate_tailored_resume  # Your service from the previous step
+from .models import Application
+from .serializers import ApplicationSerializer
+from .services import generate_tailored_resume  # Твоя функция запроса к ИИ
+from django.shortcuts import render
 
+# Имя должно строго совпадать, маленькими буквами, через нижнее подчеркивание
+def index_view(request):
+    return render(request, 'index.html')
 
-class TailorApplicationView(APIView):
+class ApplicationView(APIView):
 
     def post(self, request):
-        serializer = TailoredApplicationSerializer(data=request.data)
+        serializer = ApplicationSerializer(data=request.data)
 
         if serializer.is_valid():
-            # 1. Saving the primary record to the database
-            application = serializer.save()
+            # 1. Создаем запись в БД со статусом PENDING
+            application = serializer.save(status='PENDING')
 
-            # 2. We take texts for sending to AI
-            resume_text = application.resume.raw_text
-            vacancy_text = application.vacancy_description
+            # 2. Вызываем ИИ, передавая ТЕКСТ резюме и ТЕКСТ вакансии напрямую
+            ai_response = generate_tailored_resume(
+                resume_text=application.resume_text,
+                vacancy_text=application.vacancy_description
+            )
 
-            # 3. Change the status to "In progress" (even though it's quick, it's necessary for logic)
-            application.status = 'PENDING'
-            application.save()
-
-            # 4. Sending a request to a free AI (OpenRouter)
-            ai_response = generate_tailored_resume(resume_text, vacancy_text)
-
+            # 3. Проверяем на ошибки OpenRouter
             if "Error:" in ai_response:
                 application.status = 'FAILED'
                 application.save()
-                return Response({"status": "FAILED", "error": ai_response}, status=400)
+                return Response({
+                    "status": "FAILED",
+                    "error_details": ai_response
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-                # Split the AI answer
+            # 4. Парсим ответ ИИ по нашему маркеру [SPLIT]
             if "[SPLIT]" in ai_response:
                 parts = ai_response.split("[SPLIT]")
                 application.cover_letter = parts[0].strip()
                 application.missing_keywords = parts[1].strip()
             else:
-                # Just in case the AI ignored the tag
                 application.cover_letter = ai_response
-                application.missing_keywords = "Failed to split the answer automatically."
+                application.missing_keywords = "Could not split custom fields automatically."
 
+            # 5. Меняем статус на SUCCESS и сохраняем
             application.status = 'SUCCESS'
-
             application.save()
 
-            # We return updated data to the client
-            return Response(TailoredApplicationSerializer(application).data, status=status.HTTP_201_CREATED)
+            # Возвращаем обновленные данные фронтенду
+            return Response(ApplicationSerializer(application).data, status=status.HTTP_201_CREATED)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Если фронтенд что-то недослал — выводим лог в консоль
+            print("Serializer validation failed:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

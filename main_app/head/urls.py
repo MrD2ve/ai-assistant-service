@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import TailorApplicationView
+from .views import ApplicationView, index_view
 
 app_name = 'head'
 
 urlpatterns = [
-    path('tailor/', TailorApplicationView.as_view(), name='tailor-resume'),
+    path('', index_view, name='index'),
+    path('tailor/', ApplicationView.as_view(), name='tailor-resume'),
 ]

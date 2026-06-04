@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Resume, TailoredApplication
+from .models import Resume, Application
 
 
 admin.site.register(Resume)
-admin.site.register(TailoredApplication)
+admin.site.register(Application)
