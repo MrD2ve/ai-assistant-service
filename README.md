@@ -76,6 +76,36 @@ python manage.py runserver
 
 ---
 
+## 🕹 Running the Infrastructure
+
+To run this project, you need three main components running simultaneously: Redis (Broker), Celery (Background Worker), and the Django Server.
+
+### Step 1: Install and Run Redis via Docker
+
+Instead of installing Redis directly onto your operating system, we use Docker for a clean, isolated environment.
+
+1. Download and install Docker Desktop for your OS.
+
+2. Ensure Docker Desktop is running.
+
+3. Open a new terminal window and pull + start the official Redis container with the following command:
+```bash
+docker run -d --name redis-broker -p 6379:6379 redis
+```
+> This command downloads the Redis image, names the container redis-broker, and maps port 6379 from the container to your local machine.
+
+### Step 2: Run the Celery Worker
+
+Open a second terminal window, activate your virtual environment, and start the Celery worker process to handle the heavy AI generation tasks.
+```bash
+For Windows Users (Single Thread Mode due to OS process limitations):
+celery -A root worker --loglevel=info -P solo
+
+For Linux / macOS Users:
+celery -A root worker --loglevel=info
+```
+---
+
 ## 🧪 API Testing with Postman
 
 You can easily test the AI Resume Tailor API endpoints using **Postman**. Follow the guide below to structure your API requests and understand the backend responses.
