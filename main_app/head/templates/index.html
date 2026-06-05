@@ -26,7 +26,7 @@
                     <p class="text-xs text-slate-400 mb-4">Paste your current resume skills, experience, or full text here.</p>
                     <textarea id="resumeText" required rows="10"
                         class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none"
-                        placeholder="Donyor Tuygunov&#10;Backend Developer&#10;Skills: Python, Django, SQL, Git..."></textarea>
+                        placeholder="John Dave&#10;Backend Developer&#10;Skills: Python, Django, SQL, Git..."></textarea>
                 </div>
 
                 <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 shadow-xl">
@@ -92,7 +92,6 @@
             const loadingState = document.getElementById('loadingState');
             const resultState = document.getElementById('resultState');
 
-            // Включаем лоадер
             emptyState.classList.add('hidden');
             loadingState.classList.remove('hidden');
             resultState.classList.add('hidden');
@@ -100,7 +99,7 @@
             submitBtn.style.opacity = '0.5';
 
             try {
-                // В FETCH теле передаем ОБА обязательных поля под ключами, которые ждет сериализатор
+                // 1. Send a POST request. The backend will respond INSTANTLY.
                 const response = await fetch('/tailor/', {
                     method: 'POST',
                     headers: {
@@ -113,32 +112,69 @@
                     })
                 });
 
-                const data = await response.json();
+                const initialData = await response.json();
 
-                if (response.ok && data.status === 'SUCCESS') {
-                    document.getElementById('missingKeywordsDisplay').innerText = data.missing_keywords || "No missing keywords detected.";
-                    document.getElementById('coverLetterDisplay').value = data.cover_letter || "";
-
-                    loadingState.classList.add('hidden');
-                    resultState.classList.remove('hidden');
+                if (response.ok) {
+                    // We received the record ID and started periodic polling (Polling)
+                    pollTaskStatus(initialData.id);
                 } else {
-                    alert('AI Generation Error: ' + (data.error_details || JSON.stringify(data)));
-                    loadingState.classList.add('hidden');
-                    emptyState.classList.remove('hidden');
+                    alert('Error starting background task.');
+                    resetUI();
                 }
 
             } catch (error) {
                 console.error('Error:', error);
-                alert('Network error or server down.');
+                alert('Network error.');
+                resetUI();
+            }
+
+            // Backend periodic polling function
+            async function pollTaskStatus(applicationId) {
+                const interval = setInterval(async () => {
+                    try {
+                        // Knocking on the status endpoint
+                        const res = await fetch(`/tailor/status/${applicationId}/`);
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            if (data.status === 'SUCCESS') {
+                                clearInterval(interval); // Stopping the survey
+
+                                // Displaying data on the screen
+                                document.getElementById('missingKeywordsDisplay').innerText = data.missing_keywords || "";
+                                document.getElementById('coverLetterDisplay').value = data.cover_letter || "";
+
+                                loadingState.classList.add('hidden');
+                                resultState.classList.remove('hidden');
+                                activateSubmitButton();
+                            } else if (data.status === 'FAILED') {
+                                clearInterval(interval);
+                                alert('AI Generation Failed: ' + (data.cover_letter || 'Unknown error'));
+                                resetUI();
+                            }
+                            // If the status is 'PENDING', the function will simply restart after 3 seconds.
+                        }
+                    } catch (err) {
+                        console.error('Polling error:', err);
+                        clearInterval(interval);
+                        resetUI();
+                    }
+                }, 3000); // Polling every 3000 milliseconds (3 seconds)
+            }
+
+            function resetUI() {
                 loadingState.classList.add('hidden');
                 emptyState.classList.remove('hidden');
-            } finally {
+                activateSubmitButton();
+            }
+
+            function activateSubmitButton() {
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
             }
         });
 
-        // Кнопка копирования
+        // Copy button
         document.getElementById('copyBtn').addEventListener('click', function() {
             const textToCopy = document.getElementById('coverLetterDisplay').value;
             navigator.clipboard.writeText(textToCopy).then(() => {

@@ -1,56 +1,40 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import render
 from .models import Application
 from .serializers import ApplicationSerializer
-from .services import generate_tailored_resume  # Твоя функция запроса к ИИ
-from django.shortcuts import render
+from .tasks import run_ai_tailor_task
 
-# Имя должно строго совпадать, маленькими буквами, через нижнее подчеркивание
+
 def index_view(request):
     return render(request, 'index.html')
 
-class ApplicationView(APIView):
 
+# 1. This endpoint only accepts data and starts Celery.
+class ApplicationView(APIView):
     def post(self, request):
         serializer = ApplicationSerializer(data=request.data)
-
         if serializer.is_valid():
-            # 1. Создаем запись в БД со статусом PENDING
+            # Create a record with the status PENDING
             application = serializer.save(status='PENDING')
 
-            # 2. Вызываем ИИ, передавая ТЕКСТ резюме и ТЕКСТ вакансии напрямую
-            ai_response = generate_tailored_resume(
-                resume_text=application.resume_text,
-                vacancy_text=application.vacancy_description
-            )
+            # We launch the task asynchronously via .delay()
+            run_ai_tailor_task.delay(application.id)
 
-            # 3. Проверяем на ошибки OpenRouter
-            if "Error:" in ai_response:
-                application.status = 'FAILED'
-                application.save()
-                return Response({
-                    "status": "FAILED",
-                    "error_details": ai_response
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # 4. Парсим ответ ИИ по нашему маркеру [SPLIT]
-            if "[SPLIT]" in ai_response:
-                parts = ai_response.split("[SPLIT]")
-                application.cover_letter = parts[0].strip()
-                application.missing_keywords = parts[1].strip()
-            else:
-                application.cover_letter = ai_response
-                application.missing_keywords = "Could not split custom fields automatically."
-
-            # 5. Меняем статус на SUCCESS и сохраняем
-            application.status = 'SUCCESS'
-            application.save()
-
-            # Возвращаем обновленные данные фронтенду
+            # Instantly return the ID of the created task
             return Response(ApplicationSerializer(application).data, status=status.HTTP_201_CREATED)
 
-        else:
-            # Если фронтенд что-то недослал — выводим лог в консоль
-            print("Serializer validation failed:", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("Validation failed:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 2. A new endpoint that the frontend will poll (Polling)
+class TaskStatusView(APIView):
+    def get(self, request, pk):
+        try:
+            application = Application.objects.get(pk=pk)
+            # Return the current status of the record (PENDING, SUCCESS, or FAILED)
+            return Response(ApplicationSerializer(application).data, status=status.HTTP_200_OK)
+        except Application.DoesNotExist:
+            return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)

@@ -7,11 +7,11 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = [
             'id',
-            'resume_text',          # Теперь валидируем текст резюме
+            'resume_text',
             'vacancy_description',
             'cover_letter',
             'missing_keywords',
             'status'
         ]
-        # Делаем поля ИИ необязательными при POST-запросе, бэкенд заполнит их сам
+        # We make AI fields optional for POST requests; the backend will fill them in automatically.
         read_only_fields = ['cover_letter', 'missing_keywords', 'status']

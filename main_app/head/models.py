@@ -19,7 +19,6 @@ class Application(models.Model):
         ('FAILED', 'Failed'),
     ]
 
-    # Вместо ForeignKey теперь храним чистый текст резюме
     resume_text = models.TextField()
     vacancy_description = models.TextField()
 

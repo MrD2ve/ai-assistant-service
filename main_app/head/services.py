@@ -29,7 +29,7 @@ def generate_tailored_resume(resume_text, vacancy_text):
 
     try:
         response = client.chat.completions.create(
-            model="openrouter/owl-alpha",
+            model="nvidia/nemotron-3-super-120b-a12b:free",
             messages=[
                 {"role": "system", "content": "You are an expert HR manager and resume builder."},
                 {"role": "user", "content": prompt}
